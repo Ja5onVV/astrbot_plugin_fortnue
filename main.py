@@ -4,10 +4,11 @@
 """
 from astrbot.api.event import filter, AstrMessageEvent
 from astrbot.api.star import Context, Star, register, StarTools
-from astrbot.api import logger
+from astrbot.api import logger, llm_tool
 import asyncio
 import os
 import tempfile
+from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 
 from .config import ConfigLoader
@@ -15,7 +16,7 @@ from .core import BackgroundManager, FortuneGenerator, ImageModerator
 from .utils import ImageUtils
 
 
-@register("astrbot_plugin_fortnue", "Xbodw", "今日运势生成器 - 生成一张二次元风格的运势图片", "2.0.1")
+@register("astrbot_plugin_fortnue", "Xbodw", "今日运势生成器 - 生成一张二次元风格的运势图片", "2.1.0")
 class FortunePlugin(Star):
     """今日运势插件 - 生成精美的运势图片"""
     
@@ -112,6 +113,32 @@ class FortunePlugin(Star):
         """获取用户头像URL"""
         user_id = event.get_sender_id()
         return f"https://q1.qlogo.cn/g?b=qq&nk={user_id}&s=640"
+
+    def _format_fortune_text(self, user_id: str, user_name: str = "") -> str:
+        """将运势数据格式化为纯文本"""
+        fortune_data = self.fortune_generator.get_fortune_for_user(user_id)
+        fortune = fortune_data["fortune"]
+        lucky_color = fortune_data["lucky_color"]
+        lucky_number = fortune_data["lucky_number"]
+        advice = fortune_data["advice"]
+        luck_value = fortune_data["luck_value"]
+        today_str = datetime.now().strftime("%Y年%m月%d日")
+
+        color_name = lucky_color.get("name", "") if isinstance(lucky_color, dict) else ""
+        color_hex = lucky_color.get("hex", "").upper() if isinstance(lucky_color, dict) else ""
+
+        lines = [
+            f"✦ {user_name or '你'} 的今日运势 ✦" if user_name else "✦ 今日运势 ✦",
+            f"日期：{today_str}",
+            f"运势等级：{fortune['level']}",
+            f"运势描述：{fortune['desc']}",
+            f"幸运指数：{luck_value}%",
+            f"幸运色：{color_name}({color_hex})" if color_name else f"幸运色：{color_hex}",
+            f"幸运数字：{lucky_number}",
+            f"今日建议：{advice}",
+            "仅供娱乐 · 相信科学 · 请勿迷信",
+        ]
+        return "\n".join(lines)
     
     async def _handle_none_generation(self, event: AstrMessageEvent, source_name: str = None):
         """处理纯背景图片获取逻辑"""
@@ -313,6 +340,22 @@ class FortunePlugin(Star):
         """生成今日运势图片"""
         async for res in self._handle_fortune_generation(event):
             yield res
+
+    @filter.command("jryst", alias=["jrys_text", "运势文本"])
+    async def jryst_cmd(self, event: AstrMessageEvent):
+        """生成今日运势纯文本（无图片）"""
+        user_id = event.get_sender_id()
+        user_name = event.get_sender_name()
+        yield event.plain_result(self._format_fortune_text(user_id, user_name))
+
+    @llm_tool(name="get_fortnue")
+    async def get_fortnue(self, event: AstrMessageEvent, userId: int):
+        """获取指定用户的今日运势文本。
+
+        Args:
+            userId(int): 用户的ID（如QQ号），用于获取其今日运势
+        """
+        return self._format_fortune_text(str(userId))
 
     @filter.command("jrysn")
     async def jrysn(self, event: AstrMessageEvent):
