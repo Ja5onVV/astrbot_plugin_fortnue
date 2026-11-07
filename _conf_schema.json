@@ -45,6 +45,12 @@
         },
         "hint": "配置图源的抽取权重，格式为 \"图源名:权重\"。例如 [\"blue_archive:2\", \"genshin:1\"]。未配置权重的图源默认权重为 1。权重越高被抽中概率越大",
         "default": []
+      },
+      "trigger_without_prefix": {
+        "description": "允许无前缀触发",
+        "type": "bool",
+        "hint": "开启后，无需输入指令前缀（如 /），直接发送「今日运势」、「运势」或「jrys」即可生成今日运势",
+        "default": false
       }
     }
   },

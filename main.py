@@ -341,6 +341,15 @@ class FortunePlugin(Star):
         async for res in self._handle_fortune_generation(event):
             yield res
 
+    @filter.regex(r"^\s*(?:今日运势|运势|[jJ][rR][yY][sS])\s*$")
+    async def jrys_no_prefix(self, event: AstrMessageEvent):
+        """无前缀触发今日运势"""
+        if not self._get_config().get("fortune_config", {}).get("trigger_without_prefix", False):
+            return
+        event.stop_event()
+        async for res in self._handle_fortune_generation(event):
+            yield res
+
     @filter.command("jryst", alias=["jrys_text", "运势文本"])
     async def jryst_cmd(self, event: AstrMessageEvent):
         """生成今日运势纯文本（无图片）"""
