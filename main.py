@@ -346,9 +346,9 @@ class FortunePlugin(Star):
         """无前缀触发今日运势"""
         if not self._get_config().get("fortune_config", {}).get("trigger_without_prefix", False):
             return
-        event.stop_event()
         async for res in self._handle_fortune_generation(event):
             yield res
+        event.stop_event()
 
     @filter.command("jryst", alias=["jrys_text", "运势文本"])
     async def jryst_cmd(self, event: AstrMessageEvent):
